@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Forecast - Smart Budget Tracker{% endblock %}
+
+{% block content %}
+<div class="forecast-container">
+    <header class="page-header">
+        <h1>Spending Forecast</h1>
+        <p class="subtitle">AI-powered predictions for the next 90 days</p>
+    </header>
+
+    {% if forecast.error %}
+    <div class="alert alert-warning">{{ forecast.error }}</div>
+    {% else %}
+    <div class="forecast-grid">
+        <!-- Forecast Chart -->
+        <div class="chart-container full-width">
+            <h3>90-Day Spending Forecast</h3>
+            <canvas id="forecastChart"></canvas>
+        </div>
+
+        <!-- Category Statistics -->
+        <div class="stats-container">
+            <h3>Category Insights</h3>
+            <div class="category-stats">
+                {% for category, stats in forecast.category_stats.items() %}
+                <div class="stat-box">
+                    <div class="stat-category">{{ category }}</div>
+                    <div class="stat-average">Avg: ${{ "%.2f"|format(stats.average) }}</div>
+                    <div class="stat-range">${{ "%.2f"|format(stats.min) }} - ${{ "%.2f"|format(stats.max) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Key Insights -->
+        <div class="insights-container">
+            <h3>Key Insights</h3>
+            <div class="insights">
+                <div class="insight-card">
+                    <span class="insight-label">Average Daily Spending</span>
+                    <span class="insight-value">${{ "%.2f"|format(forecast.average_daily) }}</span>
+                </div>
+                <div class="insight-card">
+                    <span class="insight-label">90-Day Projection</span>
+                    <span class="insight-value">${{ "%.2f"|format(forecast.average_daily * 90) }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    const forecastData = {{ forecast|tojson }};
+    const ctx = document.getElementById('forecastChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: forecastData.forecast_dates,
+            datasets: [{
+                label: 'Forecasted Daily Spending',
+                data: forecastData.forecast_values,
+                borderColor: '#45B7D1',
+                backgroundColor: 'rgba(69, 183, 209, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: true }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+    </script>
+    {% endif %}
+</div>
+{% endblock %}

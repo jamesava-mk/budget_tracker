@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Smart Budget Tracker{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <header class="page-header">
+        <h1>Your Profile</h1>
+    </header>
+
+    <div class="profile-grid">
+        <!-- User Info Card -->
+        <div class="card">
+            <h3>Account Information</h3>
+            <div class="profile-info">
+                <div class="info-row">
+                    <span class="label">Username:</span>
+                    <span class="value">{{ user.username }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Email:</span>
+                    <span class="value">{{ user.email }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Member Since:</span>
+                    <span class="value">{{ user.created_at }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="card">
+            <h3>Spending Statistics</h3>
+            <div class="stats-display">
+                <div class="stat">
+                    <div class="stat-label">Total Transactions</div>
+                    <div class="stat-value">{{ stats.transaction_count or 0 }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total Income</div>
+                    <div class="stat-value">${{ "%.2f"|format(stats.total_income or 0) }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total Expenses</div>
+                    <div class="stat-value">${{ "%.2f"|format(stats.total_expenses or 0) }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Net Balance</div>
+                    <div class="stat-value">${{ "%.2f"|format((stats.total_income or 0) - (stats.total_expenses or 0)) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Recommendations -->
+    <div class="card recommendations-card">
+        <h3>AI Spending Recommendations</h3>
+        <div id="recommendationsList"></div>
+    </div>
+</div>
+
+<script>
+fetch('/api/recommendations')
+    .then(r => r.json())
+    .then(data => {
+        const list = document.getElementById('recommendationsList');
+        const recHtml = data.recommendations.map(rec => `
+            <div class="recommendation ${rec.type}">
+                <h4>${rec.title}</h4>
+                <p>${rec.message}</p>
+                <small>${rec.action}</small>
+            </div>
+        `).join('');
+        
+        const anomalyHtml = data.anomalies.map(anom => `
+            <div class="anomaly ${anom.severity}">
+                <h4>⚠️ ${anom.message}</h4>
+                <p>${anom.transaction}: $${anom.amount}</p>
+            </div>
+        `).join('');
+        
+        list.innerHTML = recHtml + anomalyHtml || '<p>No recommendations at this time</p>';
+    });
+</script>
+{% endblock %}

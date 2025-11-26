@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Smart Budget Tracker{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <header class="dashboard-header">
+        <h1>Dashboard</h1>
+        <p class="subtitle">Welcome back, {{ session.username }}!</p>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- Summary Cards -->
+        <div class="summary-section">
+            <div class="stat-card income-card">
+                <div class="stat-label">Monthly Income</div>
+                <div class="stat-value">${{ "%.2f"|format(summary.income or 0) }}</div>
+            </div>
+            
+            <div class="stat-card expense-card">
+                <div class="stat-label">Monthly Expenses</div>
+                <div class="stat-value">${{ "%.2f"|format(summary.expenses or 0) }}</div>
+            </div>
+            
+            <div class="stat-card balance-card">
+                <div class="stat-label">Balance</div>
+                <div class="stat-value">${{ "%.2f"|format((summary.income or 0) - (summary.expenses or 0)) }}</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3>Spending by Category</h3>
+                <canvas id="spendingChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="transactions-section">
+            <h3>Recent Transactions</h3>
+            <div class="transaction-list">
+                {% if recent_transactions %}
+                    {% for transaction in recent_transactions %}
+                    <div class="transaction-item">
+                        <div class="transaction-details">
+                            <div class="transaction-category">{{ transaction.category }}</div>
+                            <div class="transaction-description">{{ transaction.description }}</div>
+                        </div>
+                        <div class="transaction-amount {% if transaction.type == 'expense' %}expense{% else %}income{% endif %}">
+                            {% if transaction.type == 'expense' %}-{% endif %}${{ "%.2f"|format(transaction.amount) }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p class="empty-state">No transactions yet. <a href="{{ url_for('transactions') }}">Add one now</a></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Initialize spending chart
+fetch('/api/spending-by-category')
+    .then(r => r.json())
+    .then(data => {
+        const ctx = document.getElementById('spendingChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.map(d => d.category),
+                datasets: [{
+                    data: data.map(d => d.total),
+                    backgroundColor: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar - Smart Budget Tracker{% endblock %}
+
+{% block content %}
+<div class="calendar-container">
+    <header class="page-header">
+        <h1>Schedule & Calendar</h1>
+        <button class="btn btn-primary" onclick="toggleAddEntry()">+ Add Schedule Entry</button>
+    </header>
+
+    <!-- Add Entry Form -->
+    <div id="addForm" class="form-card hidden">
+        <h3>Add Schedule Entry</h3>
+        <form id="scheduleForm" class="form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="title">Title</label>
+                    <input type="text" id="title" name="title" required placeholder="e.g., Rent payment due">
+                </div>
+                
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" placeholder="Add any notes..."></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="type">Type</label>
+                    <select id="type" name="type" onchange="toggleBudgetFields()">
+                        <option value="note">Note</option>
+                        <option value="bill">Bill</option>
+                        <option value="reminder">Reminder</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="budgetFields" class="hidden">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="amount">Amount</label>
+                        <input type="number" id="amount" name="amount" step="0.01">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" name="category">
+                            <option value="Food">Food</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+                <button type="button" class="btn btn-secondary" onclick="toggleAddEntry()">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Calendar View -->
+    <div class="calendar-view">
+        <div id="calendar"></div>
+    </div>
+
+    <!-- Entries List -->
+    <div class="entries-list">
+        <h3>Upcoming Schedule</h3>
+        <div id="entriesList"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.0.0/index.global.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.0.0/index.global.min.css" rel="stylesheet" />
+
+<script>
+function toggleAddEntry() {
+    document.getElementById('addForm').classList.toggle('hidden');
+}
+
+function toggleBudgetFields() {
+    const type = document.getElementById('type').value;
+    document.getElementById('budgetFields').classList.toggle('hidden', type === 'note');
+}
+
+function saveEntry() {
+    const form = document.getElementById('scheduleForm');
+    const formData = {
+        title: form.title.value,
+        date: form.date.value,
+        description: form.description.value,
+        type: form.type.value,
+        amount: form.amount.value || null,
+        category: form.category.value || null
+    };
+    
+    fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+    })
+    .then(r => r.json())
+    .then(data => {
+        toggleAddEntry();
+        loadEntries();
+        form.reset();
+    });
+}
+
+function loadEntries() {
+    fetch('/api/schedule')
+        .then(r => r.json())
+        .then(entries => {
+            const list = document.getElementById('entriesList');
+            list.innerHTML = entries.map(e => `
+                <div class="entry-item">
+                    <div class="entry-date">${e.date}</div>
+                    <div class="entry-content">
+                        <h4>${e.title}</h4>
+                        <p>${e.description}</p>
+                        ${e.amount ? `<span class="entry-amount">$${e.amount}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        });
+}
+
+// Initialize FullCalendar
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 'auto'
+    });
+    calendar.render();
+    loadEntries();
+});
+
+document.getElementById('date').valueAsDate = new Date();
+</script>
+{% endblock %}
