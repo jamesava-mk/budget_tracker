@@ -1,12 +1,12 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertCircle, Mail, CheckCircle } from "lucide-react"
+import { AlertCircle, CheckCircle } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 interface AuthPageProps {
   onLogin: () => void
@@ -19,10 +19,8 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [fullName, setFullName] = useState("")
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [verificationCode, setVerificationCode] = useState("")
-  const [generatedCode, setGeneratedCode] = useState("")
   const [success, setSuccess] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
   const validatePassword = (pwd: string): string | null => {
     if (pwd.length < 8) {
@@ -37,169 +35,95 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
     return null
   }
 
-  const generateVerificationCode = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString()
-  }
-
-  const sendVerificationEmail = (userEmail: string, code: string) => {
-    console.log(`[v0] Verification code for ${userEmail}: ${code}`)
-    alert(
-      `Verification code sent to ${userEmail}!\n\nYour code is: ${code}\n\n(In production, this would be sent via email service)`,
-    )
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setSuccess("")
+    setIsLoading(true)
 
-    if (!email || !password) {
-      setError("Please fill in all fields")
-      return
-    }
+    const supabase = createClient()
 
-    if (isSignUp) {
-      const passwordError = validatePassword(password)
-      if (passwordError) {
-        setError(passwordError)
+    try {
+      if (!email || !password) {
+        setError("Please fill in all fields")
         return
       }
 
-      if (password !== confirmPassword) {
-        setError("Passwords do not match")
-        return
-      }
+      if (isSignUp) {
+        const passwordError = validatePassword(password)
+        if (passwordError) {
+          setError(passwordError)
+          return
+        }
 
-      if (!fullName) {
-        setError("Please enter your full name")
-        return
-      }
+        if (password !== confirmPassword) {
+          setError("Passwords do not match")
+          return
+        }
 
-      const users = JSON.parse(localStorage.getItem("users") || "{}")
-      if (users[email]) {
-        setError("Email already registered")
-        return
-      }
+        if (!fullName) {
+          setError("Please enter your full name")
+          return
+        }
 
-      const code = generateVerificationCode()
-      setGeneratedCode(code)
-      sendVerificationEmail(email, code)
-      setIsVerifying(true)
-      setSuccess("Verification code sent! Check your email.")
-    } else {
-      const users = JSON.parse(localStorage.getItem("users") || "{}")
-      if (!users[email]) {
-        setError("Email not registered")
-        return
-      }
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo:
+              process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback`,
+            data: {
+              full_name: fullName,
+            },
+          },
+        })
 
-      if (users[email].password !== password) {
-        setError("Invalid password")
-        return
-      }
+        if (signUpError) throw signUpError
 
-      if (!users[email].verified) {
-        setError("Please verify your email first")
-        return
-      }
+        if (data.user) {
+          setSuccess("Account created! Please check your email to verify your account.")
+        }
+      } else {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
 
-      localStorage.setItem("currentUser", email)
-      onLogin()
+        if (signInError) throw signInError
+
+        if (data.session) {
+          setSuccess("Login successful!")
+          setTimeout(() => onLogin(), 500)
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred during authentication")
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleVerification = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleGoogleLogin = async () => {
     setError("")
+    setIsLoading(true)
 
-    if (verificationCode !== generatedCode) {
-      setError("Invalid verification code")
-      return
+    try {
+      const supabase = createClient()
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) throw error
+
+      // User will be redirected to Google's OAuth page
+    } catch (err: any) {
+      setError(err.message || "Failed to initiate Google sign-in")
+      setIsLoading(false)
     }
-
-    const users = JSON.parse(localStorage.getItem("users") || "{}")
-    users[email] = {
-      fullName,
-      password,
-      verified: true,
-      createdAt: new Date().toISOString(),
-    }
-    localStorage.setItem("users", JSON.stringify(users))
-    localStorage.setItem("currentUser", email)
-
-    setSuccess("Email verified! Logging you in...")
-    setTimeout(() => onLogin(), 1500)
-  }
-
-  const handleGoogleLogin = () => {
-    alert(
-      "Google OAuth would be integrated here using NextAuth.js or similar.\n\nFor demo purposes, this is simulated.",
-    )
-    // In production: window.location.href = '/api/auth/signin/google'
-  }
-
-  if (isVerifying) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-200 to-slate-300 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md relative z-10 border-slate-300 bg-white/95 backdrop-blur shadow-xl">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
-                <Mail className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xl font-bold text-slate-900">Verify Email</span>
-            </div>
-            <CardTitle className="text-slate-900">Enter Verification Code</CardTitle>
-            <CardDescription className="text-slate-600">We sent a 6-digit code to {email}</CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <form onSubmit={handleVerification} className="space-y-4">
-              {error && (
-                <div className="bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
-
-              {success && (
-                <div className="bg-green-50 border border-green-300 rounded-lg p-3 flex items-start gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-green-700">{success}</p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Verification Code</label>
-                <Input
-                  type="text"
-                  placeholder="000000"
-                  maxLength={6}
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-                  className="bg-white border-slate-300 text-slate-900 text-center text-2xl tracking-widest"
-                />
-              </div>
-
-              <Button className="w-full bg-slate-700 hover:bg-slate-800 text-white font-semibold">Verify Email</Button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const code = generateVerificationCode()
-                  setGeneratedCode(code)
-                  sendVerificationEmail(email, code)
-                  setSuccess("New code sent!")
-                }}
-                className="w-full text-sm text-slate-600 hover:text-slate-900 underline"
-              >
-                Resend Code
-              </button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   return (
@@ -249,6 +173,7 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+                  disabled={isLoading}
                 />
               </div>
             )}
@@ -261,6 +186,7 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+                disabled={isLoading}
               />
             </div>
 
@@ -272,6 +198,7 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+                disabled={isLoading}
               />
               {isSignUp && (
                 <p className="text-xs text-slate-500 mt-1">Must be 8+ characters with numbers and symbols</p>
@@ -287,12 +214,17 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400"
+                  disabled={isLoading}
                 />
               </div>
             )}
 
-            <Button className="w-full bg-slate-700 hover:bg-slate-800 text-white font-semibold">
-              {isSignUp ? "Sign Up" : "Login"}
+            <Button
+              type="submit"
+              className="w-full bg-slate-700 hover:bg-slate-800 text-white font-semibold"
+              disabled={isLoading}
+            >
+              {isLoading ? (isSignUp ? "Creating account..." : "Logging in...") : isSignUp ? "Sign Up" : "Login"}
             </Button>
 
             <div className="relative">
@@ -309,6 +241,7 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
               onClick={handleGoogleLogin}
               variant="outline"
               className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 bg-transparent"
+              disabled={isLoading}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
@@ -342,6 +275,7 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
                   setSuccess("")
                 }}
                 className="ml-2 text-slate-800 hover:text-slate-900 font-semibold underline"
+                disabled={isLoading}
               >
                 {isSignUp ? "Login" : "Sign Up"}
               </button>
