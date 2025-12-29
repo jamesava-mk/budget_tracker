@@ -1,5 +1,5 @@
 """
-Smart Budget Tracker - Flask Application
+Smaat - Flask Application
 A comprehensive expense tracking and forecasting app with AI-powered insights
 """
 

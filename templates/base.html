@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Smart Budget Tracker{% endblock %}</title>
+    <!-- Updated default title from "Smart Budget Tracker" to "Smaat" -->
+    <title>{% block title %}Smaat{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
@@ -13,7 +14,8 @@
         <div class="navbar-container">
             <div class="navbar-logo">
                 <span class="logo-icon">💰</span>
-                <span class="logo-text">Smart Budget</span>
+                <!-- Updated navbar logo text from "Smart Budget" to "Smaat" -->
+                <span class="logo-text">Smaat</span>
             </div>
             <ul class="nav-menu">
                 <li><a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a></li>

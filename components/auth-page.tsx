@@ -140,7 +140,7 @@ export default function AuthPage({ onLogin }: AuthPageProps) {
             <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">₦</span>
             </div>
-            <span className="text-xl font-bold text-slate-900">Smart Budget Tracker</span>
+            <span className="text-xl font-bold text-slate-900">Smaat</span>
           </div>
           <CardTitle className="text-slate-900">{isSignUp ? "Create Account" : "Login"}</CardTitle>
           <CardDescription className="text-slate-600">

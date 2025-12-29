@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Smart Budget Tracker",
+  title: "Smaat",
   description: "AI-powered expense tracking and financial forecasting",
   generator: "v0.app",
   icons: {

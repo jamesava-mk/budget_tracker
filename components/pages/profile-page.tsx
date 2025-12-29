@@ -62,13 +62,13 @@ export default function ProfilePage() {
 
       <Card className="bg-slate-800/50 border-purple-500/20">
         <CardHeader>
-          <CardTitle className="text-white">About Smart Budget Tracker</CardTitle>
+          <CardTitle className="text-white">About Smaat</CardTitle>
           <CardDescription>v1.0.0</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-purple-200">
-            Smart Budget Tracker is an AI-powered personal finance application designed to help you manage expenses,
-            forecast spending, and gain actionable insights into your financial habits.
+            Smaat is an AI-powered personal finance application designed to help you manage expenses, forecast spending,
+            and gain actionable insights into your financial habits.
           </p>
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="p-3 bg-slate-700/50 rounded-lg">
